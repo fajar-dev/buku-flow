@@ -39,12 +39,6 @@ interface DecryptedBody {
     flow_token?: string;
 }
 
-// tipe minimal hasil query Simas.employee
-export interface EmployeeData {
-    id_employee: string | number;
-    full_name: string;
-}
-
 // TEMPLATE UNTUK CONFIRM & COMPLETE
 const SCREEN_RESPONSES = {
     CONFIRM: {
@@ -64,8 +58,7 @@ const SCREEN_RESPONSES = {
 };
 
 export const getNextScreen = async (
-    decryptedBody: DecryptedBody,
-    employee: EmployeeData | null,   // <<< DAPAT DARI server.ts
+    decryptedBody: DecryptedBody
 ): Promise<ScreenResponse> => {
     const { screen, data, action, flow_token } = decryptedBody;
 
@@ -113,6 +106,7 @@ export const getNextScreen = async (
     if (action === "data_exchange") {
         switch (screen) {
             case "DETAILS": {
+                // data.book berisi ID asset (string) yang dipilih user di UI
                 const readyBooks = await Simas.getReadyBooks();
 
                 const selectedAsset = readyBooks.find(
@@ -123,21 +117,13 @@ export const getNextScreen = async (
                     throw new Error("Invalid book selection");
                 }
 
-                if (!employee) {
-                    // fallback kalau nomor HP tidak ketemu di DB
-                    return {
-                        screen: "ERROR",
-                        data: {
-                            message: "Data karyawan tidak ditemukan untuk nomor ini.",
-                        },
-                    };
-                }
-
+                // sementara name & employee_id masih hardcode;
+                // nanti bisa diganti ambil dari context / API / Simas.employee(phone)
                 return {
                     ...SCREEN_RESPONSES.CONFIRM,
                     data: {
-                        name: employee.full_name,                       // dari DB
-                        employee_id: String(employee.id_employee),      // dari DB
+                        name: "John Doe",
+                        employee_id: "EMP12345",
                         book: selectedAsset.name,
                         planned_return_date: data.planned_return_date,
                         reason: data.reason,
@@ -148,10 +134,13 @@ export const getNextScreen = async (
             case "CONFIRM": {
                 console.log("Saving book borrowing:", data);
 
-                // kalau mau simpan ke asset_holders di sini:
-                // const assetId = Number(data.book_id ?? data.book);
-                // const employeeId = String(employee?.id_employee);
-                // await Simas.addHolder(assetId, employeeId, data.reason);
+                // Di sini kamu bisa panggil Simas.addHolder kalau data sudah lengkap
+                //
+                // Contoh (kalau front-end kirim book_id & employee_id):
+                //
+                // const assetId = Number(data.book_id);
+                // const employeeId = Number(data.employee_id);
+                // await Simas.addHolder(assetId, employeeId);
 
                 return {
                     ...SCREEN_RESPONSES.COMPLETE,

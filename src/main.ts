@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 import { Hono } from 'hono'
 import { decryptRequest, encryptResponse, FlowEndpointException } from './encryption'
 import { getNextScreen } from './flow'
@@ -65,43 +72,21 @@ app.post("/", async (c) => {
 
     const { aesKeyBuffer, initialVectorBuffer, decryptedBody } = decryptedRequest
 
-    // ✨ AMBIL NOMOR PENERIMA FLOW DI SINI
-    // -----
-    // NOTE: sesuaikan path berikut dengan struktur decryptedBody kamu.
-    // Misal di WhatsApp Flows sering ada sesuatu seperti:
-    // decryptedBody.user.phone atau decryptedBody.context.user.phone.
-    // Tinggal ganti sesuai log kamu.
-    // -----
-    let phoneNumber: number | null = null;
-
-    try {
-        const rawPhone =
-            (decryptedBody.user && decryptedBody.user.phone) ||
-            (decryptedBody.customer && decryptedBody.customer.phone) ||
-            (decryptedBody.sender && decryptedBody.sender.phone);
-
-        if (rawPhone) {
-            // buang tanda + kalau ada
-            const clean = String(rawPhone).replace(/^\+/, '');
-            phoneNumber = Number(clean);
+    /*
+    // Flow token validation block (optional)
+    if (!isValidFlowToken(decryptedBody.flow_token)) {
+        const error_response = {
+            error_msg: `The message is no longer available`,
         }
-    } catch (e) {
-        console.warn('Failed to parse phone from decryptedBody:', e);
+        return c.text(
+            encryptResponse(error_response, aesKeyBuffer, initialVectorBuffer),
+            427
+        )
     }
+    */
+    console.log(decryptedBody)
 
-    console.log(phoneNumber)
-
-    let employee = null;
-    if (phoneNumber) {
-        try {
-            employee = await Simas.employee(phoneNumber);
-        } catch (e) {
-            console.error('Error fetching employee by phone:', e);
-        }
-    }
-
-    // PANGGIL FLOW DENGAN DATA EMPLOYEE
-    const screenResponse = await getNextScreen(decryptedBody, employee)
+    const screenResponse = await getNextScreen(decryptedBody)
 
     const encryptedResponse = encryptResponse(
         screenResponse,
