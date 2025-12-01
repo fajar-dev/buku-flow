@@ -15,7 +15,8 @@ interface DetailsData {
 interface ConfirmData {
     name: string;
     employee_id: string;
-    book: string;
+    book: string;               // label yang ditampilkan di layar (judul buku)
+    book_id: string;            // ID buku yang dipakai untuk insert ke DB
     planned_return_date: string;
     reason: string;
 }
@@ -66,7 +67,7 @@ export const getNextScreen = async (
     }
 
     // STEP 1: INIT → kirim DETAILS dengan books dari DB
-    if (action === "INIT") {
+    if (action === 'INIT') {
         const readyBooks = await Simas.getReadyBooks();
         const employee = await getEmployeeFromToken(flow_token);
 
@@ -79,19 +80,19 @@ export const getNextScreen = async (
                 })),
                 employee_name: employee?.full_name,
                 employee_id: employee?.id_employee,
-            },
+            } as DetailsData,
         };
     }
 
     // STEP 2: DATA_EXCHANGE
-    if (action === "data_exchange") {
+    if (action === 'data_exchange') {
         switch (screen) {
-            case "DETAILS": {
+            case 'DETAILS': {
                 const readyBooks = await Simas.getReadyBooks();
                 const employee = await getEmployeeFromToken(flow_token);
 
                 const selected = readyBooks.find(
-                    (asset: any) => String(asset.id) === data.book
+                    (asset: any) => String(asset.id) === data.book // "425"
                 );
 
                 if (!selected || !employee) {
@@ -101,7 +102,8 @@ export const getNextScreen = async (
                 const confirmData: ConfirmData = {
                     name: employee.full_name,
                     employee_id: String(employee.id_employee),
-                    book: selected.name,
+                    book: selected.name,              // untuk tampilan di UI
+                    book_id: String(selected.id),     // untuk backend / DB
                     planned_return_date: data.planned_return_date,
                     reason: data.reason,
                 };
@@ -109,18 +111,27 @@ export const getNextScreen = async (
                 return { screen: 'CONFIRM', data: confirmData };
             }
 
-            case "CONFIRM": {
+            case 'CONFIRM': {
                 const d = data as ConfirmData;
 
-                await Simas.addHolder(Number(d.book), d.employee_id, d.reason);
+                // Pakai book_id sebagai sumber kebenaran ID asset
+                // fallback ke d.book kalau (misal) flow lama belum kirim book_id
+                const assetId = Number(d.book_id ?? d.book);
+
+                if (!assetId || Number.isNaN(assetId)) {
+                    console.error('Invalid assetId from CONFIRM data:', d);
+                    return { screen: 'ERROR', data: { message: 'Invalid book selected' } };
+                }
+
+                await Simas.addHolder(assetId, d.employee_id, d.reason);
 
                 return {
                     screen: 'COMPLETE',
                     data: {
                         extension_message_response: {
-                        params: { flow_token: flow_token || '' },
+                            params: { flow_token: flow_token || '' },
                         },
-                    },
+                    } as CompleteData,
                 };
             }
 
@@ -129,8 +140,8 @@ export const getNextScreen = async (
         }
     }
 
-    console.error("Unhandled request body:", decryptedBody);
+    console.error('Unhandled request body:', decryptedBody);
     throw new Error(
-        "Unhandled endpoint request. Make sure you handle the request action & screen logged above."
+        'Unhandled endpoint request. Make sure you handle the request action & screen logged above.'
     );
 };
