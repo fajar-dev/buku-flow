@@ -1,5 +1,5 @@
 // flow.ts
-import { Simas } from './service/simas'
+import { Simas } from "./service/simas";
 
 interface Book {
     id: string;
@@ -13,7 +13,8 @@ interface DetailsData {
 interface ConfirmData {
     name: string;
     employee_id: string;
-    book: string;
+    book_id: string;             
+    book: string;                 
     planned_return_date: string;
     reason: string;
 }
@@ -46,6 +47,7 @@ const SCREEN_RESPONSES = {
         data: {
             name: "John Doe",
             employee_id: "EMP12345",
+            book_id: "", 
             book: "Belajar Internet Dasar",
             planned_return_date: "2025-12-31",
             reason: "Untuk belajar jaringan komputer.",
@@ -89,7 +91,7 @@ export const getNextScreen = async (
 
         const books: Book[] = readyBooks.map((asset: any) => ({
             id: String(asset.id),
-            title: asset.code + ' - ' + asset.name,
+            title: asset.code + " - " + asset.name,
         }));
 
         const detailsResponse: ScreenResponse<DetailsData> = {
@@ -119,28 +121,56 @@ export const getNextScreen = async (
 
                 // sementara name & employee_id masih hardcode;
                 // nanti bisa diganti ambil dari context / API / Simas.employee(phone)
+                const confirmData: ConfirmData = {
+                    name: "Fajar Rivaldi Chan",
+                    employee_id: "0202589",
+                    book_id: String(selectedAsset.id), // penting buat insert ke DB
+                    book: selectedAsset.name,
+                    planned_return_date: data.planned_return_date,
+                    reason: data.reason,
+                };
+
                 return {
                     ...SCREEN_RESPONSES.CONFIRM,
-                    data: {
-                        name: "John Doe",
-                        employee_id: "EMP12345",
-                        book: selectedAsset.name,
-                        planned_return_date: data.planned_return_date,
-                        reason: data.reason,
-                    },
+                    data: confirmData,
                 };
             }
 
             case "CONFIRM": {
                 console.log("Saving book borrowing:", data);
 
-                // Di sini kamu bisa panggil Simas.addHolder kalau data sudah lengkap
-                //
-                // Contoh (kalau front-end kirim book_id & employee_id):
-                //
-                // const assetId = Number(data.book_id);
-                // const employeeId = Number(data.employee_id);
-                // await Simas.addHolder(assetId, employeeId);
+                const confirmData = data as ConfirmData;
+
+                const assetId = Number(confirmData.book_id);
+                const employeeId = confirmData.employee_id;
+                const purpose = confirmData.reason;
+
+                if (!assetId || !employeeId) {
+                    console.error("Missing assetId or employeeId in CONFIRM data", {
+                        assetId,
+                        employeeId,
+                    });
+                    return {
+                        screen: "ERROR",
+                        data: {
+                            message: "Data peminjaman tidak lengkap.",
+                        },
+                    };
+                }
+
+                try {
+                    // Simpan peminjaman buku ke DB
+                    await Simas.addHolder(assetId, employeeId, purpose);
+                } catch (err) {
+                    console.error("Failed to save book borrowing:", err);
+                    return {
+                        screen: "ERROR",
+                        data: {
+                            message:
+                                "Terjadi kesalahan saat menyimpan peminjaman buku. Silakan coba lagi.",
+                        },
+                    };
+                }
 
                 return {
                     ...SCREEN_RESPONSES.COMPLETE,
