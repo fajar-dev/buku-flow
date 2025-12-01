@@ -1,5 +1,4 @@
-// flow.ts
-import { Simas } from "./service/simas";
+import { Simas } from './service/simas';
 
 interface Book {
     id: string;
@@ -8,13 +7,15 @@ interface Book {
 
 interface DetailsData {
     books: Book[];
+    employee_name?: string;
+    employee_id?: string;
 }
 
 interface ConfirmData {
     name: string;
     employee_id: string;
-    book_id: string;             
-    book: string;                 
+    book_id: string;
+    book: string;
     planned_return_date: string;
     reason: string;
 }
@@ -40,23 +41,14 @@ interface DecryptedBody {
     flow_token?: string;
 }
 
-// TEMPLATE UNTUK CONFIRM & COMPLETE
-const SCREEN_RESPONSES = {
-    CONFIRM: {
-        screen: "CONFIRM",
-        data: {
-            name: "John Doe",
-            employee_id: "EMP12345",
-            book_id: "", 
-            book: "Belajar Internet Dasar",
-            planned_return_date: "2025-12-31",
-            reason: "Untuk belajar jaringan komputer.",
-        } as ConfirmData,
-    } as ScreenResponse<ConfirmData>,
-    COMPLETE: {
-        screen: "COMPLETE",
-        data: {} as CompleteData,
-    } as ScreenResponse<CompleteData>,
+// ambil employee dari flow_token
+const getEmployeeFromToken = async (flow_token?: string) => {
+    if (!flow_token) return null;
+    try {
+        return await Simas.employee(flow_token);
+    } catch {
+        return null;
+    }
 };
 
 export const getNextScreen = async (
@@ -64,133 +56,78 @@ export const getNextScreen = async (
 ): Promise<ScreenResponse> => {
     const { screen, data, action, flow_token } = decryptedBody;
 
-    // health check
-    if (action === "ping") {
-        return {
-            screen: "PING",
-            data: {
-                status: "active",
-            },
-        };
+    // PING
+    if (action === 'ping') {
+        return { screen: 'PING', data: { status: 'active' } };
     }
 
-    // kalau client kirim error
+    // ERROR dari client
     if (data?.error) {
-        console.warn("Received client error:", data);
-        return {
-            screen: "ERROR",
-            data: {
-                acknowledged: true,
-            },
-        };
+        return { screen: 'ERROR', data: { acknowledged: true } };
     }
 
-    // STEP 1: INIT → kirim DETAILS dengan books dari DB
-    if (action === "INIT") {
+    // INIT → kirim list books + info karyawan
+    if (action === 'INIT') {
         const readyBooks = await Simas.getReadyBooks();
+        const employee = await getEmployeeFromToken(flow_token);
 
-        const books: Book[] = readyBooks.map((asset: any) => ({
-            id: String(asset.id),
-            title: asset.code + " - " + asset.name,
-        }));
-
-        const detailsResponse: ScreenResponse<DetailsData> = {
-            screen: "DETAILS",
+        return {
+            screen: 'DETAILS',
             data: {
-                books,
+                books: readyBooks.map((asset: any) => ({
+                    id: String(asset.id),
+                    title: asset.code + ' - ' + asset.name,
+                })),
+                employee_name: employee?.full_name,
+                employee_id: employee?.id_employee,
             },
         };
-
-        return detailsResponse;
     }
 
-    // STEP 2: DATA_EXCHANGE
-    if (action === "data_exchange") {
+    // DATA_EXCHANGE
+    if (action === 'data_exchange') {
         switch (screen) {
-            case "DETAILS": {
-                // data.book berisi ID asset (string) yang dipilih user di UI
+            case 'DETAILS': {
                 const readyBooks = await Simas.getReadyBooks();
+                const employee = await getEmployeeFromToken(flow_token);
 
-                const selectedAsset = readyBooks.find(
+                const selected = readyBooks.find(
                     (asset: any) => String(asset.id) === data.book
                 );
 
-                if (!selectedAsset) {
-                    throw new Error("Invalid book selection");
+                if (!selected || !employee) {
+                    return { screen: 'ERROR', data: {} };
                 }
 
-                // sementara name & employee_id masih hardcode;
-                // nanti bisa diganti ambil dari context / API / Simas.employee(phone)
                 const confirmData: ConfirmData = {
-                    name: "Fajar Rivaldi Chan",
-                    employee_id: "0202589",
-                    book_id: String(selectedAsset.id), // penting buat insert ke DB
-                    book: selectedAsset.name,
+                    name: employee.full_name,
+                    employee_id: String(employee.id_employee),
+                    book_id: String(selected.id),
+                    book: selected.name,
                     planned_return_date: data.planned_return_date,
                     reason: data.reason,
                 };
 
-                return {
-                    ...SCREEN_RESPONSES.CONFIRM,
-                    data: confirmData,
-                };
+                return { screen: 'CONFIRM', data: confirmData };
             }
 
-            case "CONFIRM": {
-                console.log("Saving book borrowing:", data);
+            case 'CONFIRM': {
+                const d = data as ConfirmData;
 
-                const confirmData = data as ConfirmData;
-
-                const assetId = Number(confirmData.book_id);
-                const employeeId = confirmData.employee_id;
-                const purpose = confirmData.reason;
-
-                if (!assetId || !employeeId) {
-                    console.error("Missing assetId or employeeId in CONFIRM data", {
-                        assetId,
-                        employeeId,
-                    });
-                    return {
-                        screen: "ERROR",
-                        data: {
-                            message: "Data peminjaman tidak lengkap.",
-                        },
-                    };
-                }
-
-                try {
-                    // Simpan peminjaman buku ke DB
-                    await Simas.addHolder(assetId, employeeId, purpose);
-                } catch (err) {
-                    console.error("Failed to save book borrowing:", err);
-                    return {
-                        screen: "ERROR",
-                        data: {
-                            message:
-                                "Terjadi kesalahan saat menyimpan peminjaman buku. Silakan coba lagi.",
-                        },
-                    };
-                }
+                await Simas.addHolder(Number(d.book_id), d.employee_id, d.reason);
 
                 return {
-                    ...SCREEN_RESPONSES.COMPLETE,
+                    screen: 'COMPLETE',
                     data: {
                         extension_message_response: {
-                            params: {
-                                flow_token: flow_token || "",
-                            },
+                        params: { flow_token: flow_token || '' },
                         },
                     },
                 };
             }
-
-            default:
-                break;
         }
     }
 
-    console.error("Unhandled request body:", decryptedBody);
-    throw new Error(
-        "Unhandled endpoint request. Make sure you handle the request action & screen logged above."
-    );
+    // fallback default
+    return { screen: 'ERROR', data: {} };
 };

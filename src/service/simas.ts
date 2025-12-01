@@ -1,3 +1,4 @@
+// service/simas.ts
 import { pool } from "../config/db";
 
 export class Simas {
