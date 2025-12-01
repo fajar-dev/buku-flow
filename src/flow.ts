@@ -15,8 +15,11 @@ interface DetailsData {
 interface ConfirmData {
     name: string;
     employee_id: string;
-    book: string;               // label yang ditampilkan di layar (judul buku)
-    book_id: string;            // ID buku yang dipakai untuk insert ke DB
+
+    asset_id: string;        // ID asset (untuk DB)
+    serial_number: string;   // serial number / code buku
+    book_title: string;      // judul buku
+
     planned_return_date: string;
     reason: string;
 }
@@ -91,8 +94,9 @@ export const getNextScreen = async (
                 const readyBooks = await Simas.getReadyBooks();
                 const employee = await getEmployeeFromToken(flow_token);
 
+                // data.book di sini masih ID dari dropdown
                 const selected = readyBooks.find(
-                    (asset: any) => String(asset.id) === data.book // "425"
+                    (asset: any) => String(asset.id) === data.book
                 );
 
                 if (!selected || !employee) {
@@ -102,25 +106,32 @@ export const getNextScreen = async (
                 const confirmData: ConfirmData = {
                     name: employee.full_name,
                     employee_id: String(employee.id_employee),
-                    book: selected.name,              // untuk tampilan di UI
-                    book_id: String(selected.id),     // untuk backend / DB
+
+                    asset_id: String(selected.id),   // ⬅️ asset id
+                    serial_number: selected.code,    // ⬅️ serial number / code
+                    book_title: selected.name,       // ⬅️ judul buku
+
                     planned_return_date: data.planned_return_date,
                     reason: data.reason,
                 };
 
+                // WA Flow akan menampilkan serial_number + book_title di screen CONFIRM
+                // dan kirim balik semua field ini di request berikutnya
                 return { screen: 'CONFIRM', data: confirmData };
             }
 
             case 'CONFIRM': {
                 const d = data as ConfirmData;
 
-                // Pakai book_id sebagai sumber kebenaran ID asset
-                // fallback ke d.book kalau (misal) flow lama belum kirim book_id
-                const assetId = Number(d.book_id ?? d.book);
+                // pakai asset_id untuk insert
+                const assetId = Number(d.asset_id);
 
                 if (!assetId || Number.isNaN(assetId)) {
                     console.error('Invalid assetId from CONFIRM data:', d);
-                    return { screen: 'ERROR', data: { message: 'Invalid book selected' } };
+                    return {
+                        screen: 'ERROR',
+                        data: { message: 'Invalid book selected' },
+                    };
                 }
 
                 await Simas.addHolder(assetId, d.employee_id, d.reason);
