@@ -1,50 +1,15 @@
-import { Simas } from './service/simas'
-
-interface Book {
-    id: string;
-    title: string;
-}
-
-interface DetailsData {
-    books: Book[];
-    employee_name?: string;
-    employee_id?: string;
-}
-
-interface ConfirmData {
-    name: string;
-    employee_id: string;
-
-    asset_id: string;
-    serial_number: string;
-    book_title: string;
-
-    planned_return_date: string;
-    reason: string;
-}
-
-interface CompleteData {
-    extension_message_response?: {
-        params: {
-            flow_token: string;
-        };
-    };
-}
-
-interface ScreenResponse<T = any> {
-    screen: string;
-    data: T;
-}
+// flow-assigned.ts
+import { Simas } from '../service/simas'
 
 interface DecryptedBody {
     screen?: string;
     data?: any;
     version?: string;
     action: string;
-    flow_token?: string;
+    flow_token?: number;
 }
 
-const getEmployeeFromToken = async (flow_token?: string) => {
+const getEmployeeFromToken = async (flow_token?: number) => {
     if (!flow_token) return null;
     try {
         return await Simas.employee(flow_token);
@@ -53,22 +18,17 @@ const getEmployeeFromToken = async (flow_token?: string) => {
     }
 };
 
-export const getNextScreen = async (
-    decryptedBody: DecryptedBody
-): Promise<ScreenResponse> => {
+export const getNextScreenAssigned = async (decryptedBody: DecryptedBody) => {
     const { screen, data, action, flow_token } = decryptedBody;
 
-    // PING
     if (action === 'ping') {
         return { screen: 'PING', data: { status: 'active' } };
     }
 
-    // ERROR dari client
     if (data?.error) {
         return { screen: 'ERROR', data: { acknowledged: true } };
     }
 
-    // STEP 1: INIT → kirim DETAILS dengan books dari DB
     if (action === 'INIT') {
         const readyBooks = await Simas.getReadyBooks();
         const employee = await getEmployeeFromToken(flow_token);
@@ -82,11 +42,10 @@ export const getNextScreen = async (
                 })),
                 employee_name: employee?.full_name,
                 employee_id: employee?.id_employee,
-            } as DetailsData,
+            },
         };
     }
 
-    // STEP 2: DATA_EXCHANGE
     if (action === 'data_exchange') {
         switch (screen) {
             case 'DETAILS': {
@@ -101,34 +60,32 @@ export const getNextScreen = async (
                     return { screen: 'ERROR', data: {} };
                 }
 
-                const confirmData: ConfirmData = {
-                    name: employee.full_name,
-                    employee_id: String(employee.id_employee),
-
-                    asset_id: String(selected.id),
-                    serial_number: selected.code,
-                    book_title: selected.name,
-
-                    planned_return_date: data.planned_return_date,
-                    reason: data.reason,
+                return {
+                    screen: 'CONFIRM',
+                    data: {
+                        name: employee.full_name,
+                        employee_id: String(employee.id_employee),
+                        asset_id: String(selected.id),
+                        serial_number: selected.code,
+                        book_title: selected.name,
+                        planned_return_date: data.planned_return_date,
+                        reason: data.reason,
+                    },
                 };
-                return { screen: 'CONFIRM', data: confirmData };
             }
 
             case 'CONFIRM': {
-                const d = data as ConfirmData;
-
-                const assetId = Number(d.asset_id);
+                const assetId = Number(data.asset_id);
 
                 if (!assetId || Number.isNaN(assetId)) {
-                    console.error('Invalid assetId from CONFIRM data:', d);
+                    console.error('Invalid assetId from CONFIRM data:', data);
                     return {
                         screen: 'ERROR',
                         data: { message: 'Invalid book selected' },
                     };
                 }
 
-                await Simas.addHolder(assetId, d.employee_id, d.reason);
+                await Simas.addHolder(assetId, data.employee_id, data.reason);
 
                 return {
                     screen: 'COMPLETE',
@@ -136,17 +93,11 @@ export const getNextScreen = async (
                         extension_message_response: {
                             params: { flow_token: flow_token || '' },
                         },
-                    } as CompleteData,
+                    },
                 };
             }
-
-            default:
-                break;
         }
     }
 
-    console.error('Unhandled request body:', decryptedBody);
-    throw new Error(
-        'Unhandled endpoint request. Make sure you handle the request action & screen logged above.'
-    );
+    throw new Error('Unhandled request for assigned flow');
 };
