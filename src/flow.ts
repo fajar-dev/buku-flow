@@ -1,4 +1,5 @@
-import { Simas } from './service/simas';
+// flow.ts
+import { Simas } from './service/simas'
 
 interface Book {
     id: string;
@@ -14,7 +15,6 @@ interface DetailsData {
 interface ConfirmData {
     name: string;
     employee_id: string;
-    book_id: string;
     book: string;
     planned_return_date: string;
     reason: string;
@@ -41,7 +41,6 @@ interface DecryptedBody {
     flow_token?: string;
 }
 
-// ambil employee dari flow_token
 const getEmployeeFromToken = async (flow_token?: string) => {
     if (!flow_token) return null;
     try {
@@ -66,8 +65,8 @@ export const getNextScreen = async (
         return { screen: 'ERROR', data: { acknowledged: true } };
     }
 
-    // INIT → kirim list books + info karyawan
-    if (action === 'INIT') {
+    // STEP 1: INIT → kirim DETAILS dengan books dari DB
+    if (action === "INIT") {
         const readyBooks = await Simas.getReadyBooks();
         const employee = await getEmployeeFromToken(flow_token);
 
@@ -84,10 +83,10 @@ export const getNextScreen = async (
         };
     }
 
-    // DATA_EXCHANGE
-    if (action === 'data_exchange') {
+    // STEP 2: DATA_EXCHANGE
+    if (action === "data_exchange") {
         switch (screen) {
-            case 'DETAILS': {
+            case "DETAILS": {
                 const readyBooks = await Simas.getReadyBooks();
                 const employee = await getEmployeeFromToken(flow_token);
 
@@ -102,7 +101,6 @@ export const getNextScreen = async (
                 const confirmData: ConfirmData = {
                     name: employee.full_name,
                     employee_id: String(employee.id_employee),
-                    book_id: String(selected.id),
                     book: selected.name,
                     planned_return_date: data.planned_return_date,
                     reason: data.reason,
@@ -111,10 +109,10 @@ export const getNextScreen = async (
                 return { screen: 'CONFIRM', data: confirmData };
             }
 
-            case 'CONFIRM': {
+            case "CONFIRM": {
                 const d = data as ConfirmData;
 
-                await Simas.addHolder(Number(d.book_id), d.employee_id, d.reason);
+                await Simas.addHolder(Number(d.book), d.employee_id, d.reason);
 
                 return {
                     screen: 'COMPLETE',
@@ -125,9 +123,14 @@ export const getNextScreen = async (
                     },
                 };
             }
+
+            default:
+                break;
         }
     }
 
-    // fallback default
-    return { screen: 'ERROR', data: {} };
+    console.error("Unhandled request body:", decryptedBody);
+    throw new Error(
+        "Unhandled endpoint request. Make sure you handle the request action & screen logged above."
+    );
 };
