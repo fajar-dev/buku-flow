@@ -77,10 +77,18 @@ async function handleFlowRequest(c: any, getNextScreen: Function) {
 
     return new Response(encryptedResponse, { status: 200 })
 }
-
 // Endpoint untuk flow peminjaman
 app.post("/assigned", async (c) => {
     return handleFlowRequest(c, getNextScreenAssigned)
+})
+
+// Health check untuk Meta - endpoint yang sama
+app.get("/assigned", (c) => {
+    return c.json({ 
+        status: "ok",
+        flow: "assigned",
+        timestamp: new Date().toISOString()
+    })
 })
 
 // Endpoint untuk flow pengembalian
@@ -88,8 +96,25 @@ app.post("/returned", async (c) => {
     return handleFlowRequest(c, getNextScreenReturned)
 })
 
-app.get("/", () => {
-    return new Response(`Hello World`)
+// Health check untuk Meta - endpoint yang sama
+app.get("/returned", (c) => {
+    return c.json({ 
+        status: "ok",
+        flow: "returned",
+        timestamp: new Date().toISOString()
+    })
+})
+
+// Root endpoints
+app.get("/", (c) => {
+    return c.text('Buku Flow API')
+})
+
+app.get("/health", (c) => {
+    return c.json({ 
+        status: "ok", 
+        timestamp: new Date().toISOString() 
+    })
 })
 
 export default {
