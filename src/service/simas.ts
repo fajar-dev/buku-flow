@@ -30,9 +30,9 @@ export class Simas {
         purpose: string,
     ): Promise<boolean> {
         const [result]: any = await pool.query(
-            `INSERT INTO asset_holders (asset_id, employee_id, assigned_at, purpose) 
+            `INSERT INTO asset_holders (asset_holder_uuid, asset_id, employee_id, assigned_at, purpose) 
             VALUES (?, ?, NOW(), ?)`,
-            [asset_id, employee_id, purpose]
+            [Bun.randomUUIDv7(), asset_id, employee_id, purpose]
         );
         return true;
     }

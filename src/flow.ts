@@ -1,4 +1,3 @@
-// flow.ts
 import { Simas } from './service/simas'
 
 interface Book {
@@ -16,9 +15,9 @@ interface ConfirmData {
     name: string;
     employee_id: string;
 
-    asset_id: string;        // ID asset (untuk DB)
-    serial_number: string;   // serial number / code buku
-    book_title: string;      // judul buku
+    asset_id: string;
+    serial_number: string;
+    book_title: string;
 
     planned_return_date: string;
     reason: string;
@@ -94,7 +93,6 @@ export const getNextScreen = async (
                 const readyBooks = await Simas.getReadyBooks();
                 const employee = await getEmployeeFromToken(flow_token);
 
-                // data.book di sini masih ID dari dropdown
                 const selected = readyBooks.find(
                     (asset: any) => String(asset.id) === data.book
                 );
@@ -107,23 +105,19 @@ export const getNextScreen = async (
                     name: employee.full_name,
                     employee_id: String(employee.id_employee),
 
-                    asset_id: String(selected.id),   // ⬅️ asset id
-                    serial_number: selected.code,    // ⬅️ serial number / code
-                    book_title: selected.name,       // ⬅️ judul buku
+                    asset_id: String(selected.id),
+                    serial_number: selected.code,
+                    book_title: selected.name,
 
                     planned_return_date: data.planned_return_date,
                     reason: data.reason,
                 };
-
-                // WA Flow akan menampilkan serial_number + book_title di screen CONFIRM
-                // dan kirim balik semua field ini di request berikutnya
                 return { screen: 'CONFIRM', data: confirmData };
             }
 
             case 'CONFIRM': {
                 const d = data as ConfirmData;
 
-                // pakai asset_id untuk insert
                 const assetId = Number(d.asset_id);
 
                 if (!assetId || Number.isNaN(assetId)) {
