@@ -4,7 +4,8 @@
   "scripts": {
     "dev": "bun run --hot src/main.ts",
     "start": "bun run src/main.ts",
-    "build": "bun build --minify --outfile dist/main.js --target bun src/main.ts"
+    "build": "bun build --minify --outfile dist/main.js --target bun src/main.ts",
+    "reminder": "bun run src/reminder.cron.ts"
   },
   "dependencies": {
     "hono": "^4.10.7",
