@@ -34,6 +34,10 @@ function isRequestSignatureValid(
     return crypto.timingSafeEqual(digestBuffer, signatureBuffer)
 }
 
+app.get('/assigned', (c) => {
+    return c.text('OK', 200)
+})
+
 app.post("/assigned", async (c) => {
     if (!PRIVATE_KEY) {
         throw new Error(
