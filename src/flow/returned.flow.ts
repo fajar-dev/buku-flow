@@ -63,7 +63,10 @@ export const getNextScreen = async (
 
     // ERROR dari client
     if (data?.error) {
-        return { screen: 'ERROR', data: { acknowledged: true } };
+        return { 
+            screen: 'ERROR', 
+            data: { message: data?.error.message || 'Terjadi kesalahan. Coba lagi.' } 
+        };
     }
 
     // STEP 1: INIT (form pengembalian)
@@ -71,7 +74,10 @@ export const getNextScreen = async (
         const employee = await getEmployeeFromToken(flow_token);
 
         if (!employee) {
-            return { screen: 'ERROR', data: {} };
+            return { 
+                screen: 'ERROR', 
+                data: { message: 'Nomor kamu tidak terdaftar sebagai karyawan PT. Media Antar Nusa' } 
+            };
         }
 
         // Ambil buku yang sedang dipinjam karyawan ini
@@ -99,7 +105,10 @@ export const getNextScreen = async (
                 const employee = await getEmployeeFromToken(flow_token);
 
                 if (!employee) {
-                    return { screen: 'ERROR', data: {} };
+                    return { 
+                        screen: 'ERROR', 
+                        data: { message: 'Data karyawan tidak valid.' } 
+                    };
                 }
 
                 const borrowedBooks = await Simas.getBorrowedBooksByEmployee(
@@ -111,7 +120,10 @@ export const getNextScreen = async (
                 );
 
                 if (!selected) {
-                    return { screen: 'ERROR', data: {} };
+                    return { 
+                        screen: 'ERROR', 
+                        data: { message: 'Buku yang dipilih tidak ditemukan.' } 
+                    };
                 }
 
                 const confirmData: ConfirmData = {
@@ -131,7 +143,10 @@ export const getNextScreen = async (
                 const assetId = Number(d.asset_id);
 
                 if (!assetId || Number.isNaN(assetId)) {
-                    return { screen: 'ERROR', data: {} };
+                    return { 
+                        screen: 'ERROR', 
+                        data: { message: 'Data buku tidak valid.' } 
+                    };
                 }
 
                 await Simas.returnBook(assetId, d.employee_id);

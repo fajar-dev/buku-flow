@@ -66,7 +66,10 @@ export const getNextScreen = async (
 
     // ERROR dari client
     if (data?.error) {
-        return { screen: 'ERROR', data: { acknowledged: true } };
+        return { 
+            screen: 'ERROR', 
+            data: { message: data?.error.message || 'Terjadi kesalahan. Coba lagi.' } 
+        };
     }
 
     // STEP 1: INIT
@@ -75,7 +78,10 @@ export const getNextScreen = async (
         const employee = await getEmployeeFromToken(flow_token);
 
         if (!employee) {
-            return { screen: 'ERROR', data: {} };
+            return { 
+                screen: 'ERROR', 
+                data: { message: 'Nomor kamu tidak terdaftar sebagai karyawan.' } 
+            };
         }
 
         return {
@@ -102,8 +108,12 @@ export const getNextScreen = async (
                     (asset: any) => String(asset.id) === data.book
                 );
 
-                if (!selected || !employee) {
-                    return { screen: 'ERROR', data: {} };
+                if (!selected) {
+                    return { screen: 'ERROR', data: { message: 'Buku tidak ditemukan.' } };
+                }
+
+                if (!employee) {
+                    return { screen: 'ERROR', data: { message: 'Data karyawan tidak valid.' } };
                 }
 
                 const confirmData: ConfirmData = {
@@ -129,12 +139,19 @@ export const getNextScreen = async (
                     console.error('Invalid assetId from CONFIRM data:', d);
                     return {
                         screen: 'ERROR',
-                        data: { message: 'Invalid book selected' },
+                        data: { message: 'Buku yang dipilih tidak valid.' },
                     };
                 }
 
-                await Simas.addHolder(assetId, d.employee_id, d.reason);
-                await Reminder.addReminder(assetId, String(flow_token), d.employee_id, d.planned_return_date);
+                try {
+                    await Simas.addHolder(assetId, d.employee_id, d.reason);
+                    await Reminder.addReminder(assetId, String(flow_token), d.employee_id, d.planned_return_date);
+                } catch (e) {
+                    return { 
+                        screen: 'ERROR', 
+                        data: { message: 'Gagal memproses peminjaman. Coba lagi.' } 
+                    };
+                }
 
                 return {
                     screen: 'COMPLETE',
