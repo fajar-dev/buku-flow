@@ -134,7 +134,7 @@ export const getNextScreen = async (
                 }
 
                 await Simas.addHolder(assetId, d.employee_id, d.reason);
-                await Reminder.addReminder(assetId, Number(flow_token), d.employee_id, d.planned_return_date);
+                await Reminder.addReminder(assetId, String(flow_token), d.employee_id, d.planned_return_date);
 
                 return {
                     screen: 'COMPLETE',

@@ -8,7 +8,7 @@ export class Reminder {
         return rows;
     }
 
-    static async addReminder(asset_id: number, phone_number: number, employee_id: string, date: string): Promise<boolean> {
+    static async addReminder(asset_id: number, phone_number: string, employee_id: string, date: string): Promise<boolean> {
         const [result]: any = await flow.query(
             `
             INSERT INTO reminders (
