@@ -71,7 +71,6 @@ export const getNextScreen = async (
     // STEP 1: INIT
     if (action === 'INIT') {
         const readyBooks = await Simas.getReadyBooks();
-        console.log(readyBooks)
         const employee = await getEmployeeFromToken(flow_token);
 
         return {

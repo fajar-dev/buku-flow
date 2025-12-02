@@ -1,4 +1,4 @@
-import { Simas } from '../service/simas'
+import { Simas } from '../service/simas';
 
 interface Book {
     id: string;
@@ -18,9 +18,6 @@ interface ConfirmData {
     asset_id: string;
     serial_number: string;
     book_title: string;
-
-    planned_return_date: string;
-    reason: string;
 }
 
 interface CompleteData {
@@ -68,21 +65,28 @@ export const getNextScreen = async (
         return { screen: 'ERROR', data: { acknowledged: true } };
     }
 
-    // STEP 1: INIT
+    // STEP 1: INIT (form pengembalian)
     if (action === 'INIT') {
-        const readyBooks = await Simas.getReadyBooks();
-        console.log(readyBooks)
         const employee = await getEmployeeFromToken(flow_token);
+
+        if (!employee) {
+            return { screen: 'ERROR', data: {} };
+        }
+
+        // Ambil buku yang sedang dipinjam karyawan ini
+        const borrowedBooks = await Simas.getBorrowedBooksByEmployee(
+            String(employee.id_employee)
+        );
 
         return {
             screen: 'DETAILS',
             data: {
-                books: readyBooks.map((asset: any) => ({
+                books: borrowedBooks.map((asset: any) => ({
                     id: String(asset.id),
                     title: asset.code + ' - ' + asset.name,
                 })),
-                employee_name: employee?.full_name,
-                employee_id: employee?.id_employee,
+                employee_name: employee.full_name,
+                employee_id: employee.id_employee,
             } as DetailsData,
         };
     }
@@ -91,14 +95,21 @@ export const getNextScreen = async (
     if (action === 'data_exchange') {
         switch (screen) {
             case 'DETAILS': {
-                const readyBooks = await Simas.getReadyBooks();
                 const employee = await getEmployeeFromToken(flow_token);
 
-                const selected = readyBooks.find(
+                if (!employee) {
+                    return { screen: 'ERROR', data: {} };
+                }
+
+                const borrowedBooks = await Simas.getBorrowedBooksByEmployee(
+                    String(employee.id_employee)
+                );
+
+                const selected = borrowedBooks.find(
                     (asset: any) => String(asset.id) === data.book
                 );
 
-                if (!selected || !employee) {
+                if (!selected) {
                     return { screen: 'ERROR', data: {} };
                 }
 
@@ -109,27 +120,20 @@ export const getNextScreen = async (
                     asset_id: String(selected.id),
                     serial_number: selected.code,
                     book_title: selected.name,
-
-                    planned_return_date: data.planned_return_date,
-                    reason: data.reason,
                 };
+
                 return { screen: 'CONFIRM', data: confirmData };
             }
 
             case 'CONFIRM': {
                 const d = data as ConfirmData;
-
                 const assetId = Number(d.asset_id);
 
                 if (!assetId || Number.isNaN(assetId)) {
-                    console.error('Invalid assetId from CONFIRM data:', d);
-                    return {
-                        screen: 'ERROR',
-                        data: { message: 'Invalid book selected' },
-                    };
+                    return { screen: 'ERROR', data: {} };
                 }
 
-                await Simas.addHolder(assetId, d.employee_id, d.reason);
+                await Simas.returnBook(assetId, d.employee_id);
 
                 return {
                     screen: 'COMPLETE',
