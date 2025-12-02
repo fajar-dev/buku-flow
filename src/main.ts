@@ -85,6 +85,12 @@ app.get("/", () => {
     return new Response(`Hello World`)
 })
 
+app.use('*', async (c, next) => {
+  console.log('Incoming:', c.req.method, c.req.path)
+  return next()
+})
+
+
 export default {
     port: PORT,
     fetch: app.fetch,
