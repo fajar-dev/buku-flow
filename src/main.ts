@@ -43,27 +43,37 @@ function isRequestSignatureValid(
 }
 
 app.post("/", async (c) => {
+    app.post("/", async (c) => {
     if (!PRIVATE_KEY) {
         throw new Error(
             'Private key is empty. Please check your env variable "PRIVATE_KEY".'
         )
     }
 
-    // Get raw body for signature verification
+    // --- READ RAW BODY ------------------------------------------------------
     const rawBody = await c.req.text()
     const signature = c.req.header("x-hub-signature-256")
 
+    console.log("===== INCOMING REQUEST =====")
+    console.log("Raw Body:", rawBody)
+    console.log("Signature:", signature)
+    console.log("================================")
+
+    // --- SIGNATURE VALIDATION ----------------------------------------------
     if (!isRequestSignatureValid(signature, rawBody, APP_SECRET)) {
+        console.error("❌ Invalid Signature")
         return new Response(null, { status: 432 })
     }
 
-    // Parse the body
+    // --- PARSE JSON BODY ----------------------------------------------------
     const body: EncryptedRequestBody = JSON.parse(rawBody)
 
     let decryptedRequest = null
     try {
         decryptedRequest = decryptRequest(body, PRIVATE_KEY, PASSPHRASE)
     } catch (err) {
+        console.error("❌ Decrypt Error:", err)
+
         if (err instanceof FlowEndpointException) {
             return new Response(null, { status: err.statusCode })
         }
@@ -72,29 +82,34 @@ app.post("/", async (c) => {
 
     const { aesKeyBuffer, initialVectorBuffer, decryptedBody } = decryptedRequest
 
-    /*
-    // Flow token validation block (optional)
-    if (!isValidFlowToken(decryptedBody.flow_token)) {
-        const error_response = {
-            error_msg: `The message is no longer available`,
-        }
-        return c.text(
-            encryptResponse(error_response, aesKeyBuffer, initialVectorBuffer),
-            427
-        )
-    }
-    */
-    console.log(decryptedBody)
+    // --- LOG DECRYPTED PAYLOAD ----------------------------------------------
+    console.log("===== DECRYPTED REQUEST =====")
+    console.log(JSON.stringify(decryptedBody, null, 2))
+    console.log("================================")
 
+    // --- FLOW PROCESSING ----------------------------------------------------
     const screenResponse = await getNextScreen(decryptedBody)
 
+    // --- LOG BEFORE ENCRYPT -------------------------------------------------
+    console.log("===== SCREEN RESPONSE (before encrypt) =====")
+    console.log(JSON.stringify(screenResponse, null, 2))
+    console.log("============================================")
+
+    // --- ENCRYPT RESPONSE ---------------------------------------------------
     const encryptedResponse = encryptResponse(
         screenResponse,
         aesKeyBuffer,
         initialVectorBuffer
     )
 
+    // --- LOG ENCRYPTED RESPONSE --------------------------------------------
+    console.log("===== ENCRYPTED RESPONSE =====")
+    console.log(encryptedResponse)
+    console.log("================================")
+
     return new Response(encryptedResponse, { status: 200 })
+})
+
 })
 
 app.get("/", () => {
