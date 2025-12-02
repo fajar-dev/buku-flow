@@ -1,15 +1,21 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 import { Hono } from 'hono'
 import { decryptRequest, encryptResponse, FlowEndpointException } from './encryption'
-import { getNextScreenAssigned } from './flow/assigned'
-import { getNextScreenReturned } from './flow/returned'
+import { getNextScreen } from './flow'
 import crypto from 'crypto'
 import { PORT, APP_SECRET, PRIVATE_KEY, PASSPHRASE} from './config/config';
 import { checkConnection } from './config/db';
+import { Simas } from './service/simas';
 
 await checkConnection()
 
 const app = new Hono()
-
 interface EncryptedRequestBody {
     encrypted_aes_key: string
     encrypted_flow_data: string
@@ -36,14 +42,14 @@ function isRequestSignatureValid(
     return crypto.timingSafeEqual(digestBuffer, signatureBuffer)
 }
 
-// Shared handler function
-async function handleFlowRequest(c: any, getNextScreen: Function) {
+app.post("/", async (c) => {
     if (!PRIVATE_KEY) {
         throw new Error(
             'Private key is empty. Please check your env variable "PRIVATE_KEY".'
         )
     }
 
+    // Get raw body for signature verification
     const rawBody = await c.req.text()
     const signature = c.req.header("x-hub-signature-256")
 
@@ -51,6 +57,7 @@ async function handleFlowRequest(c: any, getNextScreen: Function) {
         return new Response(null, { status: 432 })
     }
 
+    // Parse the body
     const body: EncryptedRequestBody = JSON.parse(rawBody)
 
     let decryptedRequest = null
@@ -65,6 +72,18 @@ async function handleFlowRequest(c: any, getNextScreen: Function) {
 
     const { aesKeyBuffer, initialVectorBuffer, decryptedBody } = decryptedRequest
 
+    /*
+    // Flow token validation block (optional)
+    if (!isValidFlowToken(decryptedBody.flow_token)) {
+        const error_response = {
+            error_msg: `The message is no longer available`,
+        }
+        return c.text(
+            encryptResponse(error_response, aesKeyBuffer, initialVectorBuffer),
+            427
+        )
+    }
+    */
     console.log(decryptedBody)
 
     const screenResponse = await getNextScreen(decryptedBody)
@@ -76,45 +95,11 @@ async function handleFlowRequest(c: any, getNextScreen: Function) {
     )
 
     return new Response(encryptedResponse, { status: 200 })
-}
-// Endpoint untuk flow peminjaman
-app.post("/assigned", async (c) => {
-    return handleFlowRequest(c, getNextScreenAssigned)
 })
 
-// Health check untuk Meta - endpoint yang sama
-app.get("/assigned", (c) => {
-    return c.json({ 
-        status: "ok",
-        flow: "assigned",
-        timestamp: new Date().toISOString()
-    })
-})
-
-// Endpoint untuk flow pengembalian
-app.post("/returned", async (c) => {
-    return handleFlowRequest(c, getNextScreenReturned)
-})
-
-// Health check untuk Meta - endpoint yang sama
-app.get("/returned", (c) => {
-    return c.json({ 
-        status: "ok",
-        flow: "returned",
-        timestamp: new Date().toISOString()
-    })
-})
-
-// Root endpoints
-app.get("/", (c) => {
-    return c.text('Buku Flow API')
-})
-
-app.get("/health", (c) => {
-    return c.json({ 
-        status: "ok", 
-        timestamp: new Date().toISOString() 
-    })
+app.get("/", () => {
+    return new Response(`Nothing to see here.
+Checkout README.md to start.`)
 })
 
 export default {

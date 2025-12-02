@@ -18,23 +18,8 @@ export class Simas {
             JOIN categories c ON c.id = sc.category_id
             LEFT JOIN asset_holders ah ON ah.asset_id = a.id
             WHERE a.status = 'active'
-            AND c.name = 'buku'
+            AND c.name LIKE 'buku'
             AND ah.asset_id IS NULL`
-        );
-        return rows;
-    }
-
-    static async getBookByEmployee(employee_id: string): Promise<any> {
-        const [rows]: any = await pool.query(
-            `SELECT a.id, a.code, a.name
-            FROM assets a
-            JOIN sub_categories sc ON sc.id = a.sub_category_id
-            JOIN categories c ON c.id = sc.category_id
-            JOIN asset_holders ah ON ah.asset_id = a.id
-            WHERE a.status = 'active'
-            AND c.name = 'buku'
-            AND ah.employee_id = ?`,
-            [employee_id]
         );
         return rows;
     }
@@ -48,16 +33,6 @@ export class Simas {
             `INSERT INTO asset_holders (asset_holder_uuid, asset_id, employee_id, assigned_at, purpose) 
             VALUES (?, ?, ?, NOW(), ?)`,
             [Bun.randomUUIDv7(), asset_id, employee_id, purpose]
-        );
-        return true;
-    }
-
-    static async returnAsset(asset_id: number, employee_id: string): Promise<boolean> {
-        const [result]: any = await pool.query(
-            `UPDATE asset_holders 
-            SET returned_at = NOW() 
-            WHERE asset_id = ? AND employee_id = ?`,
-            [asset_id, employee_id]
         );
         return true;
     }
