@@ -68,9 +68,10 @@ export const getNextScreen = async (
         return { screen: 'ERROR', data: { acknowledged: true } };
     }
 
-    // STEP 1: INIT → kirim DETAILS dengan books dari DB
+    // STEP 1: INIT
     if (action === 'INIT') {
         const readyBooks = await Simas.getReadyBooks();
+        console.log(readyBooks)
         const employee = await getEmployeeFromToken(flow_token);
 
         return {

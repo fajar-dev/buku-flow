@@ -98,8 +98,7 @@ app.post("/", async (c) => {
 })
 
 app.get("/", () => {
-    return new Response(`Nothing to see here.
-Checkout README.md to start.`)
+    return new Response(`Hello World`)
 })
 
 export default {
