@@ -1,9 +1,8 @@
-// service/simas.ts
-import { pool } from "../config/db";
+import { simas } from "../config/simas.db";
 
 export class Simas {
     static async employee(phone: number): Promise<any> {
-        const [rows]: any = await pool.query(
+        const [rows]: any = await simas.query(
             "SELECT id_employee, full_name FROM employees WHERE mobile_phone = ? LIMIT 1",
             [phone]
         );
@@ -11,7 +10,7 @@ export class Simas {
     }
 
     static async getReadyBooks(): Promise<any> {
-        const [rows]: any = await pool.query(
+        const [rows]: any = await simas.query(
             `SELECT a.id, a.code, a.name
                 FROM assets a
                 JOIN sub_categories sc ON sc.id = a.sub_category_id
@@ -27,7 +26,7 @@ export class Simas {
     }
 
     static async getBorrowedBooksByEmployee(employee_id: string): Promise<any> {
-        const [rows]: any = await pool.query(
+        const [rows]: any = await simas.query(
             `SELECT a.id, a.code, a.name
                 FROM assets a
                 JOIN sub_categories sc ON sc.id = a.sub_category_id
@@ -48,7 +47,7 @@ export class Simas {
         employee_id: string,
         purpose: string,
     ): Promise<boolean> {
-        const [result]: any = await pool.query(
+        const [result]: any = await simas.query(
             `
             INSERT INTO asset_holders (
                 asset_holder_uuid,
@@ -79,7 +78,7 @@ export class Simas {
     }
 
     static async returnBook(asset_id: number, employee_id: string): Promise<boolean> {
-        const [result]: any = await pool.query(
+        const [result]: any = await simas.query(
             `
             UPDATE asset_holders
             SET returned_at = NOW()

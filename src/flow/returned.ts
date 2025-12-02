@@ -1,3 +1,4 @@
+import { Reminder } from '../service/reminder';
 import { Simas } from '../service/simas';
 
 interface Book {
@@ -134,6 +135,7 @@ export const getNextScreen = async (
                 }
 
                 await Simas.returnBook(assetId, d.employee_id);
+                await Reminder.changeStatus(assetId, d.employee_id);
 
                 return {
                     screen: 'COMPLETE',

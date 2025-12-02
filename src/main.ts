@@ -10,9 +10,11 @@ import {
 import { getNextScreen as assignedNextScreen } from './flow/assigned'
 import { getNextScreen as returnedNextScreen } from './flow/returned'
 import { PORT, APP_SECRET, PRIVATE_KEY, PASSPHRASE } from './config/config'
-import { checkConnection } from './config/db'
+import { checkConnection as simasCheckConnection } from './config/simas.db'
+import { checkConnection as flowCheckConnection } from './config/flow.db'
 
-await checkConnection()
+await simasCheckConnection()
+await flowCheckConnection()
 
 const app = new Hono()
 

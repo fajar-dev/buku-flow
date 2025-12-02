@@ -1,3 +1,4 @@
+import { Reminder } from '../service/reminder';
 import { Simas } from '../service/simas'
 
 interface Book {
@@ -73,6 +74,10 @@ export const getNextScreen = async (
         const readyBooks = await Simas.getReadyBooks();
         const employee = await getEmployeeFromToken(flow_token);
 
+        if (!employee) {
+            return { screen: 'ERROR', data: {} };
+        }
+
         return {
             screen: 'DETAILS',
             data: {
@@ -129,6 +134,7 @@ export const getNextScreen = async (
                 }
 
                 await Simas.addHolder(assetId, d.employee_id, d.reason);
+                await Reminder.addReminder(assetId, Number(flow_token), d.employee_id, d.planned_return_date);
 
                 return {
                     screen: 'COMPLETE',
