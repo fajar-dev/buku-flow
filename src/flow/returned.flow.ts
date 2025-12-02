@@ -69,7 +69,7 @@ export const getNextScreen = async (
         };
     }
 
-    // STEP 1: INIT (form pengembalian)
+    // STEP 1: INIT
     if (action === 'INIT') {
         const employee = await getEmployeeFromToken(flow_token);
 
@@ -80,7 +80,6 @@ export const getNextScreen = async (
             };
         }
 
-        // Ambil buku yang sedang dipinjam karyawan ini
         const borrowedBooks = await Simas.getBorrowedBooksByEmployee(
             String(employee.id_employee)
         );

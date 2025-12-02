@@ -80,7 +80,7 @@ export const getNextScreen = async (
         if (!employee) {
             return { 
                 screen: 'ERROR', 
-                data: { message: 'Nomor kamu tidak terdaftar sebagai karyawan.' } 
+                data: { message: 'Nomor kamu tidak terdaftar sebagai karyawan PT. Media Antar Nusa' } 
             };
         }
 

@@ -9,6 +9,22 @@ export class Simas {
         return rows[0];
     }
 
+    static async getEmployeeById(id: string): Promise<any> {
+        const [rows]: any = await simas.query(
+            "SELECT * FROM employees WHERE id_employee = ? LIMIT 1",
+            [id]
+        );
+        return rows[0];
+    }
+
+    static async getAssetById(id: number): Promise<any> {
+        const [rows]: any = await simas.query(
+            "SELECT * FROM assets WHERE id = ? LIMIT 1",
+            [id]
+        );
+        return rows[0];
+    }
+
     static async getReadyBooks(): Promise<any> {
         const [rows]: any = await simas.query(
             `SELECT a.id, a.code, a.name
