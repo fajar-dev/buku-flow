@@ -1,13 +1,21 @@
 import { Hono } from 'hono'
-import { decryptRequest, encryptResponse, FlowEndpointException } from './encryption'
-import { getNextScreen as assignedNextScreen } from './flow/assigned'
+import type { Context } from 'hono'
 import crypto from 'crypto'
-import { PORT, APP_SECRET, PRIVATE_KEY, PASSPHRASE} from './config/config';
-import { checkConnection } from './config/db';
+
+import {
+  decryptRequest,
+  encryptResponse,
+  FlowEndpointException,
+} from './encryption'
+import { getNextScreen as assignedNextScreen } from './flow/assigned'
+import { getNextScreen as returnedNextScreen } from './flow/returned'
+import { PORT, APP_SECRET, PRIVATE_KEY, PASSPHRASE } from './config/config'
+import { checkConnection } from './config/db'
 
 await checkConnection()
 
 const app = new Hono()
+
 interface EncryptedRequestBody {
     encrypted_aes_key: string
     encrypted_flow_data: string
@@ -23,43 +31,48 @@ function isRequestSignatureValid(
     if (!signature) return false
 
     const signatureBuffer = Buffer.from(
-        signature.replace("sha256=", ""),
-        "utf-8"
+        signature.replace('sha256=', ''),
+        'utf-8'
     )
 
-    const hmac = crypto.createHmac("sha256", appSecret)
-    const digestString = hmac.update(rawBody).digest("hex")
-    const digestBuffer = Buffer.from(digestString, "utf-8")
+    const hmac = crypto.createHmac('sha256', appSecret)
+    const digestString = hmac.update(rawBody).digest('hex')
+    const digestBuffer = Buffer.from(digestString, 'utf-8')
 
     return crypto.timingSafeEqual(digestBuffer, signatureBuffer)
 }
 
-app.get('assigned', (c) => {
-    return c.text('OK', 200)
-})
+if (!PRIVATE_KEY) {
+    throw new Error(
+        'Private key is empty. Please check your env variable "PRIVATE_KEY".'
+    )
+}
 
-app.post("assigned", async (c) => {
-    if (!PRIVATE_KEY) {
-        throw new Error(
-            'Private key is empty. Please check your env variable "PRIVATE_KEY".'
-        )
-    }
+const createEncryptedFlowHandler =
+    (
+        getNextScreen: (body: any) => Promise<any> | any
+    ) =>
+    async (c: Context): Promise<Response> => {
+        // Ambil raw body untuk verifikasi signature
+        const rawBody = await c.req.text()
+        const signature = c.req.header('x-hub-signature-256')
 
-    // Get raw body for signature verification
-    const rawBody = await c.req.text()
-    const signature = c.req.header("x-hub-signature-256")
-
-    if (!isRequestSignatureValid(signature, rawBody, APP_SECRET)) {
+        if (!isRequestSignatureValid(signature, rawBody, APP_SECRET)) {
         return new Response(null, { status: 432 })
-    }
+        }
 
-    // Parse the body
-    const body: EncryptedRequestBody = JSON.parse(rawBody)
+        // Parse body terenkripsi
+        let body: EncryptedRequestBody
+        try {
+        body = JSON.parse(rawBody)
+        } catch {
+        return new Response(null, { status: 400 })
+        }
 
-    let decryptedRequest = null
-    try {
-        decryptedRequest = decryptRequest(body, PRIVATE_KEY, PASSPHRASE)
-    } catch (err) {
+        let decryptedRequest = null
+        try {
+        decryptedRequest = decryptRequest(body, PRIVATE_KEY!, PASSPHRASE)
+        } catch (err) {
         if (err instanceof FlowEndpointException) {
             return new Response(null, { status: err.statusCode })
         }
@@ -70,7 +83,7 @@ app.post("assigned", async (c) => {
 
     console.log(decryptedBody)
 
-    const screenResponse = await assignedNextScreen(decryptedBody)
+    const screenResponse = await getNextScreen(decryptedBody)
 
     const encryptedResponse = encryptResponse(
         screenResponse,
@@ -79,17 +92,14 @@ app.post("assigned", async (c) => {
     )
 
     return new Response(encryptedResponse, { status: 200 })
-})
+}
 
-app.get("/", () => {
-    return new Response(`Hello World`)
-})
+app.post('/assigned', createEncryptedFlowHandler(assignedNextScreen))
+app.post('/returned', createEncryptedFlowHandler(returnedNextScreen))
 
-app.use('*', async (c, next) => {
-  console.log('Incoming:', c.req.method, c.req.path)
-  return next()
+app.get('/', () => {
+    return new Response('Hello World')
 })
-
 
 export default {
     port: PORT,
