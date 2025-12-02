@@ -1,5 +1,5 @@
-import { Reminder } from '../service/reminder';
-import { Simas } from '../service/simas'
+import { Reminder } from '../service/reminder.service';
+import { Simas } from '../service/simas.service'
 
 interface Book {
     id: string;

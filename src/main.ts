@@ -3,12 +3,12 @@ import type { Context } from 'hono'
 import crypto from 'crypto'
 
 import {
-  decryptRequest,
-  encryptResponse,
-  FlowEndpointException,
+    decryptRequest,
+    encryptResponse,
+    FlowEndpointException,
 } from './encryption'
-import { getNextScreen as assignedNextScreen } from './flow/assigned'
-import { getNextScreen as returnedNextScreen } from './flow/returned'
+import { getNextScreen as assignedNextScreen } from './flow/assigned.flow'
+import { getNextScreen as returnedNextScreen } from './flow/returned.flow'
 import { PORT, APP_SECRET, PRIVATE_KEY, PASSPHRASE } from './config/config'
 import { checkConnection as simasCheckConnection } from './config/simas.db'
 import { checkConnection as flowCheckConnection } from './config/flow.db'
