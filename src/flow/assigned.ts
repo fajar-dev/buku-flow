@@ -1,4 +1,4 @@
-import { Simas } from './service/simas'
+import { Simas } from '../service/simas'
 
 interface Book {
     id: string;

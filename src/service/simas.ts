@@ -11,18 +11,19 @@ export class Simas {
     }
 
     static async getReadyBooks(): Promise<any> {
-        const [rows]: any = await pool.query(
-            `SELECT a.id, a.code, a.name
-            FROM assets a
-            JOIN sub_categories sc ON sc.id = a.sub_category_id
-            JOIN categories c ON c.id = sc.category_id
-            LEFT JOIN asset_holders ah ON ah.asset_id = a.id
-            WHERE a.status = 'active'
-            AND c.name LIKE 'buku'
-            AND ah.asset_id IS NULL`
-        );
-        return rows;
-    }
+    const [rows]: any = await pool.query(
+        `SELECT a.id, a.code, a.name
+        FROM assets a
+        JOIN sub_categories sc ON sc.id = a.sub_category_id
+        JOIN categories c ON c.id = sc.category_id
+        LEFT JOIN asset_holders ah ON ah.asset_id = a.id
+        WHERE a.status = 'active'
+        AND c.name LIKE 'buku'
+        AND ah.asset_id IS NULL`
+    );
+    return rows;
+}
+
 
     static async addHolder(
         asset_id: number,

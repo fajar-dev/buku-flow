@@ -1,17 +1,9 @@
-/**
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- */
-
 import { Hono } from 'hono'
 import { decryptRequest, encryptResponse, FlowEndpointException } from './encryption'
-import { getNextScreen } from './flow'
+import { getNextScreen } from './flow/assigned'
 import crypto from 'crypto'
 import { PORT, APP_SECRET, PRIVATE_KEY, PASSPHRASE} from './config/config';
 import { checkConnection } from './config/db';
-import { Simas } from './service/simas';
 
 await checkConnection()
 
@@ -42,38 +34,28 @@ function isRequestSignatureValid(
     return crypto.timingSafeEqual(digestBuffer, signatureBuffer)
 }
 
-app.post("/", async (c) => {
-    app.post("/", async (c) => {
+app.post("/assigned", async (c) => {
     if (!PRIVATE_KEY) {
         throw new Error(
             'Private key is empty. Please check your env variable "PRIVATE_KEY".'
         )
     }
 
-    // --- READ RAW BODY ------------------------------------------------------
+    // Get raw body for signature verification
     const rawBody = await c.req.text()
     const signature = c.req.header("x-hub-signature-256")
 
-    console.log("===== INCOMING REQUEST =====")
-    console.log("Raw Body:", rawBody)
-    console.log("Signature:", signature)
-    console.log("================================")
-
-    // --- SIGNATURE VALIDATION ----------------------------------------------
     if (!isRequestSignatureValid(signature, rawBody, APP_SECRET)) {
-        console.error("❌ Invalid Signature")
         return new Response(null, { status: 432 })
     }
 
-    // --- PARSE JSON BODY ----------------------------------------------------
+    // Parse the body
     const body: EncryptedRequestBody = JSON.parse(rawBody)
 
     let decryptedRequest = null
     try {
         decryptedRequest = decryptRequest(body, PRIVATE_KEY, PASSPHRASE)
     } catch (err) {
-        console.error("❌ Decrypt Error:", err)
-
         if (err instanceof FlowEndpointException) {
             return new Response(null, { status: err.statusCode })
         }
@@ -82,34 +64,17 @@ app.post("/", async (c) => {
 
     const { aesKeyBuffer, initialVectorBuffer, decryptedBody } = decryptedRequest
 
-    // --- LOG DECRYPTED PAYLOAD ----------------------------------------------
-    console.log("===== DECRYPTED REQUEST =====")
-    console.log(JSON.stringify(decryptedBody, null, 2))
-    console.log("================================")
+    console.log(decryptedBody)
 
-    // --- FLOW PROCESSING ----------------------------------------------------
     const screenResponse = await getNextScreen(decryptedBody)
 
-    // --- LOG BEFORE ENCRYPT -------------------------------------------------
-    console.log("===== SCREEN RESPONSE (before encrypt) =====")
-    console.log(JSON.stringify(screenResponse, null, 2))
-    console.log("============================================")
-
-    // --- ENCRYPT RESPONSE ---------------------------------------------------
     const encryptedResponse = encryptResponse(
         screenResponse,
         aesKeyBuffer,
         initialVectorBuffer
     )
 
-    // --- LOG ENCRYPTED RESPONSE --------------------------------------------
-    console.log("===== ENCRYPTED RESPONSE =====")
-    console.log(encryptedResponse)
-    console.log("================================")
-
     return new Response(encryptedResponse, { status: 200 })
-})
-
 })
 
 app.get("/", () => {
