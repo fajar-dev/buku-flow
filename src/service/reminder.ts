@@ -15,7 +15,7 @@ export class Reminder {
                 asset_id,
                 phone_number,
                 employee_id,
-                date,
+                date
             )
             VALUES (?, ?, ?, ?)
             `,
