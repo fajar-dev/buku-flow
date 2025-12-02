@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { decryptRequest, encryptResponse, FlowEndpointException } from './encryption'
-import { getNextScreen } from './flow/assigned'
+import { getNextScreen as assignedNextScreen } from './flow/assigned'
 import crypto from 'crypto'
 import { PORT, APP_SECRET, PRIVATE_KEY, PASSPHRASE} from './config/config';
 import { checkConnection } from './config/db';
@@ -66,7 +66,7 @@ app.post("/assigned", async (c) => {
 
     console.log(decryptedBody)
 
-    const screenResponse = await getNextScreen(decryptedBody)
+    const screenResponse = await assignedNextScreen(decryptedBody)
 
     const encryptedResponse = encryptResponse(
         screenResponse,
