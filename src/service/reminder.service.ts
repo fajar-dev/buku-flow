@@ -3,7 +3,7 @@ import { flow } from "../config/flow.db";
 export class Reminder {
     static async getReminder(): Promise<any> {
         const [rows]: any = await flow.query(
-            "SELECT * FROM reminders WHERE date >= CURDATE() AND is_returned = false",
+            "SELECT * FROM reminders WHERE date <= CURDATE() AND is_returned = false",
         );
         return rows;
     }

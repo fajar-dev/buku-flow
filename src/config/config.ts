@@ -17,3 +17,8 @@ export const FLOW_DB_POOL = process.env.FLOW_DB_POOL || 4
 export const APP_SECRET = process.env.APP_SECRET || ''
 export const PRIVATE_KEY = process.env.PRIVATE_KEY || ''
 export const PASSPHRASE = process.env.PASSPHRASE || ''
+
+export const WHATSAPP_API_KEY = process.env.WHATSAPP_API_KEY || ''
+export const WHATSAPP_API_URL = process.env.WHATSAPP_API_URL || ''
+export const WHATSAPP_API_VERSION = process.env.WHATSAPP_API_VERSION || ''
+export const WHATSAPP_API_PHONE_ID = process.env.WHATSAPP_API_PHONE_ID || ''
