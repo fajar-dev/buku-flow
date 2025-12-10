@@ -35,7 +35,7 @@ export class Whatsapp {
                 text: `Halo, ${name}!`
             },
             body: {
-                text: `Kami ingin menginformasikan bahwa masa peminjaman buku Anda untuk *${bookTitle}* sudah mencapai batas target peminjaman.\n\nMohon untuk segera mengembalikan buku yang dipinjam. Terima kasih atas kerja samanya!`
+                text: `Kami ingin menginformasikan bahwa masa peminjaman buku Anda untuk *${bookTitle}* sudah mencapai batas tanggal target peminjaman.\n\nMohon untuk segera mengembalikan buku yang dipinjam. Terima kasih atas kerja samanya!`
             },
             footer: {
                 text: "Jika ada pertanyaan, silakan hubungi tim HR"
