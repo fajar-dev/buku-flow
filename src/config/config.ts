@@ -14,7 +14,8 @@ export const FLOW_DB_PASSWORD = process.env.FLOW_DB_PASSWORD
 export const FLOW_DB_NAME = process.env.FLOW_DB_NAME 
 export const FLOW_DB_POOL = process.env.FLOW_DB_POOL || 4
 
-export const APP_SECRET = process.env.APP_SECRET || ''
+export const NUSANET_APP_SECRET = process.env.NUSANET_APP_SECRET || ''
+export const NUSAFIBER_APP_SECRET = process.env.NUSAFIBER_APP_SECRET || ''
 export const PRIVATE_KEY = process.env.PRIVATE_KEY || ''
 export const PASSPHRASE = process.env.PASSPHRASE || ''
 

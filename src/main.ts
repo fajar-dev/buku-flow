@@ -9,7 +9,7 @@ import {
 } from './encryption'
 import { getNextScreen as assignedNextScreen } from './flow/assigned.flow'
 import { getNextScreen as returnedNextScreen } from './flow/returned.flow'
-import { PORT, APP_SECRET, PRIVATE_KEY, PASSPHRASE } from './config/config'
+import { PORT, NUSANET_APP_SECRET, NUSAFIBER_APP_SECRET, PRIVATE_KEY, PASSPHRASE } from './config/config'
 import { checkConnection as simasCheckConnection } from './config/simas.db'
 import { checkConnection as flowCheckConnection } from './config/flow.db'
 
@@ -52,52 +52,56 @@ if (!PRIVATE_KEY) {
 
 const createEncryptedFlowHandler =
     (
-        getNextScreen: (body: any) => Promise<any> | any
+        getNextScreen: (body: any) => Promise<any> | any,
+        appSecret: string
     ) =>
     async (c: Context): Promise<Response> => {
         // Ambil raw body untuk verifikasi signature
         const rawBody = await c.req.text()
         const signature = c.req.header('x-hub-signature-256')
 
-        if (!isRequestSignatureValid(signature, rawBody, APP_SECRET)) {
-        return new Response(null, { status: 432 })
+        if (!isRequestSignatureValid(signature, rawBody, appSecret)) {
+            return new Response(null, { status: 432 })
         }
 
         // Parse body terenkripsi
         let body: EncryptedRequestBody
         try {
-        body = JSON.parse(rawBody)
+            body = JSON.parse(rawBody)
         } catch {
-        return new Response(null, { status: 400 })
+            return new Response(null, { status: 400 })
         }
 
         let decryptedRequest = null
         try {
-        decryptedRequest = decryptRequest(body, PRIVATE_KEY!, PASSPHRASE)
+            decryptedRequest = decryptRequest(body, PRIVATE_KEY!, PASSPHRASE)
         } catch (err) {
-        if (err instanceof FlowEndpointException) {
-            return new Response(null, { status: err.statusCode })
+            if (err instanceof FlowEndpointException) {
+                return new Response(null, { status: err.statusCode })
+            }
+            return new Response(null, { status: 500 })
         }
-        return new Response(null, { status: 500 })
+
+        const { aesKeyBuffer, initialVectorBuffer, decryptedBody } = decryptedRequest
+
+        console.log(decryptedBody)
+
+        const screenResponse = await getNextScreen(decryptedBody)
+
+        const encryptedResponse = encryptResponse(
+            screenResponse,
+            aesKeyBuffer,
+            initialVectorBuffer
+        )
+
+        return new Response(encryptedResponse, { status: 200 })
     }
 
-    const { aesKeyBuffer, initialVectorBuffer, decryptedBody } = decryptedRequest
+app.post('/nusanet/assigned', createEncryptedFlowHandler(assignedNextScreen, NUSANET_APP_SECRET))
+app.post('/nusanet/returned', createEncryptedFlowHandler(returnedNextScreen, NUSANET_APP_SECRET))
 
-    console.log(decryptedBody)
-
-    const screenResponse = await getNextScreen(decryptedBody)
-
-    const encryptedResponse = encryptResponse(
-        screenResponse,
-        aesKeyBuffer,
-        initialVectorBuffer
-    )
-
-    return new Response(encryptedResponse, { status: 200 })
-}
-
-app.post('/assigned', createEncryptedFlowHandler(assignedNextScreen))
-app.post('/returned', createEncryptedFlowHandler(returnedNextScreen))
+app.post('/nusafiber/assigned', createEncryptedFlowHandler(assignedNextScreen, NUSAFIBER_APP_SECRET))
+app.post('/nusafiber/returned', createEncryptedFlowHandler(returnedNextScreen, NUSAFIBER_APP_SECRET))
 
 app.get('/', () => {
     return new Response('Hello World')
