@@ -6,27 +6,33 @@ const BASE_DELAY = 1000;
 const RETRYABLE_CODES = [429];
 
 export class NusaContact {
-    private static getClient(): AxiosInstance {
-        return axios.create({
-            baseURL: NUSACONTACT_API_URL,
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-                'X-Api-Key': NUSACONTACT_API_KEY,
-            },
-        });
-    }
+    private static readonly apiUrl = NUSACONTACT_API_URL
+    private static readonly apiKey = NUSACONTACT_API_KEY
+    private static readonly phoneId = NUSACONTACT_PHONE_ID
+    
+    private static readonly maxAttempts = MAX_ATTEMPTS
+    private static readonly baseDelay = BASE_DELAY
+    private static readonly retryableCodes = RETRYABLE_CODES
+    
+    private static http: AxiosInstance = axios.create({
+        baseURL: this.apiUrl,
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            'X-Api-Key': this.apiKey,
+        },
+    });
 
     private static async delay(attempt: number): Promise<void> {
-        const delayTime = BASE_DELAY * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 300);
+        const delayTime = this.baseDelay * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 300);
         await new Promise(resolve => setTimeout(resolve, delayTime));
     }
 
     static async sendMessage(type: string, payload: any, phone: string): Promise<void> {
-        console.log(`${NUSACONTACT_API_URL}/messages?phone_number_id=${NUSACONTACT_PHONE_ID}`);
-        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        console.log(`${this.apiUrl}/messages?phone_number_id=${this.phoneId}`);
+        for (let attempt = 1; attempt <= this.maxAttempts; attempt++) {
             try {
-                const res = await this.getClient().post(`/messages?phone_number_id=${NUSACONTACT_PHONE_ID}`,{
+                const res = await this.http.post(`/messages?phone_number_id=${this.phoneId}`,{
                 messaging_product: "whatsapp",
                 recipient_type: 'individual',
                 to: phone,
@@ -43,24 +49,24 @@ export class NusaContact {
                 const status = err?.response?.status;
                 const message = err?.response?.data || err.message;
 
-                console.error(`[${phone}]: Attempt ${attempt}/${MAX_ATTEMPTS} - ${status || 'No Status'}: ${message}`);
+                console.error(`[${phone}]: Attempt ${attempt}/${this.maxAttempts} - ${status || 'No Status'}: ${message}`);
 
                 if (status === 429) {
-                    console.log(`[${phone}]: Rate limit reached. Retrying... Attempt ${attempt}/${MAX_ATTEMPTS}`);
+                    console.log(`[${phone}]: Rate limit reached. Retrying... Attempt ${attempt}/${this.maxAttempts}`);
                     await this.delay(attempt);
                     continue;
                 }
 
-                if (status && status >= 400 && status < 500 && !RETRYABLE_CODES.includes(status)) {
+                if (status && status >= 400 && status < 500 && !this.retryableCodes.includes(status)) {
                     console.error(`[${phone}]:  Non-retryable 4xx error.`);
                     break;
                 }
 
-                if (attempt < MAX_ATTEMPTS) {
+                if (attempt < this.maxAttempts) {
                     await this.delay(attempt);
                 }
 
-                if (attempt >= MAX_ATTEMPTS) {
+                if (attempt >= this.maxAttempts) {
                     console.error(`[${phone}]: Max retry attempts reached.`);
                 }
             }
