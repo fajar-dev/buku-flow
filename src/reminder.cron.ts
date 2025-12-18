@@ -1,6 +1,7 @@
 import { Reminder } from "./service/reminder.service";
 import { Simas } from "./service/simas.service";
-import { Whatsapp } from "./service/whatsapp.service";
+import { NusaContact } from "./service/nusacontact.service";
+// import { Whatsapp } from "./service/whatsapp.service";
 
 async function bootstrap() {
     try {
@@ -9,7 +10,9 @@ async function bootstrap() {
 
             const asset = await Simas.getAssetById(reminder.asset_id);
             const employee = await Simas.getEmployeeById(reminder.employee_id);
-            await Whatsapp.sendReminder(employee.mobile_phone, employee.full_name, asset.name);
+            await NusaContact.sendReminder(employee.mobile_phone, employee.full_name, asset.name);
+            // await Whatsapp.sendReminder(employee.mobile_phone, employee.full_name, asset.name);
+
         }
 
     } catch (error) {

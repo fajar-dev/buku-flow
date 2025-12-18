@@ -23,3 +23,7 @@ export const WHATSAPP_API_KEY = process.env.WHATSAPP_API_KEY || ''
 export const WHATSAPP_API_URL = process.env.WHATSAPP_API_URL || ''
 export const WHATSAPP_API_VERSION = process.env.WHATSAPP_API_VERSION || ''
 export const WHATSAPP_API_PHONE_ID = process.env.WHATSAPP_API_PHONE_ID || ''
+
+export const NUSACONTACT_API_URL = process.env.NUSACONTACT_API_URL || ''
+export const NUSACONTACT_API_KEY = process.env.NUSACONTACT_API_KEY || ''
+export const NUSACONTACT_PHONE_ID = process.env.NUSACONTACT_PHONE_ID || ''
